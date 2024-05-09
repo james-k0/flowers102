@@ -32,7 +32,7 @@ torch.backends.cudnn.benchmark = True
 # In[3]:
 
 
-batchsize = 16
+batchsize = 48
 num_classes = 102
 learning_rate = 0.0015
 num_epochs = 100
@@ -74,9 +74,17 @@ valData = datasets.Flowers102(
 )
 
 
+# In[5]:
+
+
+print(f'training data has: {len(trainingData)} images')
+print(f'validation data has: {len(valData)} images')
+print(f'test data has: {len(testData)} images')
+
+
 # # Get some dataloaders
 
-# In[5]:
+# In[6]:
 
 
 train_dataloader = DataLoader(trainingData, batch_size=batchsize, shuffle=True, num_workers=4, pin_memory=True)
@@ -86,7 +94,7 @@ val_dataloader = DataLoader(valData, batch_size=batchsize, shuffle=False, num_wo
 
 # # Neural Network class
 
-# In[6]:
+# In[7]:
 
 
 class NeuralNet(nn.Module):
@@ -99,13 +107,16 @@ class NeuralNet(nn.Module):
             nn.Conv2d(32,64,kernel_size=5,stride=1,padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),#half size
+            nn.Conv2d(64,128,kernel_size=5,stride=1,padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.classifier = nn.Sequential(
-            nn.Linear(64*64*64 ,4096),
+            nn.Linear(64*64*32 ,1024),
             nn.ReLU(),
-            nn.Dropout(), #add a bit of randomness for some fun  + generality
-            nn.Linear(4096,102),
-            nn.LogSoftmax(dim=1)
+            nn.Dropout(0.5), #add a bit of randomness for some fun  + generality
+            nn.Linear(1024,102),
+            nn.ReLU()
         )
         
         
@@ -118,7 +129,7 @@ class NeuralNet(nn.Module):
 
 # # Model = something
 
-# In[7]:
+# In[8]:
 
 
 model = NeuralNet().to(device,non_blocking=True)
@@ -128,7 +139,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
 # # Actually do the training, needs to print less often
 
-# In[8]:
+# In[ ]:
 
 
 training_epoch_losses = []
@@ -156,7 +167,7 @@ train()
 
 # # Plot the avg loss against epochs
 
-# In[9]:
+# In[ ]:
 
 
 plt.plot(training_epoch_losses, label='Training Loss')
