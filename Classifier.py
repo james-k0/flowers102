@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torchvision
 from torchvision import datasets
-import torchvision.transforms as transforms
+import torchvision.transforms.v2 as transforms
 
 
 # # Decide if cuda
@@ -32,10 +32,10 @@ torch.backends.cudnn.benchmark = True
 # In[3]:
 
 
-batchsize = 64
+batchsize = 16
 num_classes = 102
 learning_rate = 0.0015
-num_epochs = 50
+num_epochs = 100
 
 
 # In[4]:
@@ -112,7 +112,6 @@ class NeuralNet(nn.Module):
         x= x.view(x.size(0),-1)
         x = self.classifier(x)
         return x
-# i should stop drinking because where did i imagine this up !?
 
 
 # # Model = something
@@ -127,9 +126,10 @@ optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
 # # Actually do the training, needs to print less often
 
-# In[ ]:
+# In[9]:
 
 
+training_epoch_losses = []
 def train():
     for epoch in range(num_epochs):
         running_loss = 0.0
@@ -137,6 +137,8 @@ def train():
         for i, (images,labels) in enumerate(train_dataloader):
             images = images.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
+            # images = images.to(device)
+            # labels = labels.to(device)
             outputs = model(images)
             optimizer.zero_grad()
             loss = cost(outputs, labels)
@@ -145,10 +147,20 @@ def train():
             
             running_loss += loss.item()
             batches +=1
+        training_epoch_losses.append(running_loss/batches)
         print(f'Epoch: {epoch+1}, Avg Loss: {running_loss/batches:4f}, Num Batches: {batches}')
 train()
-# next steps: the running loss is a bit jank since batches is always 16 it will print the same batch, should be shuffled though but doesnt look like it ? 
-# maybe im confusing shuffles with individual weights
+
+
+# # Plot the avg loss against epochs
+
+# In[10]:
+
+
+plt.plot(training_epoch_losses, label='Training Loss')
+# plt.plot(validation_epoch_losses,label='Validation Loss')   
+plt.legend()
+plt.show()
 
 
 # # Display the training, testing, validation accuracy
@@ -205,3 +217,9 @@ get_ipython().system('jupyter nbconvert --to script Classifier.ipynb')
 
 
 # # todo possibly do the image display thing/ https://pytorch.org/tutorials/beginner/introyt/introyt1_tutorial.html / tune hyperparams
+
+# In[ ]:
+
+
+
+
