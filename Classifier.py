@@ -46,11 +46,12 @@ trainingData = datasets.Flowers102(
     split = "train",
     download = True,
     transform = transforms.Compose([
-        transforms.Resize((256, 256)),
+        transforms.Resize((256,256)),
+        # transforms.RandomResizedCrop((256, 256),antialias=True),
+        transforms.RandomRotation(30),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.RandomVerticalFlip(),
         transforms.ToTensor(),
+        # transforms.Normalize([0.5,],[0.2,])
     ])
 )
 testData = datasets.Flowers102(
@@ -126,7 +127,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
 # # Actually do the training, needs to print less often
 
-# In[9]:
+# In[8]:
 
 
 training_epoch_losses = []
@@ -154,7 +155,7 @@ train()
 
 # # Plot the avg loss against epochs
 
-# In[10]:
+# In[9]:
 
 
 plt.plot(training_epoch_losses, label='Training Loss')
@@ -165,7 +166,7 @@ plt.show()
 
 # # Display the training, testing, validation accuracy
 
-# In[ ]:
+# In[10]:
 
 
 def evaluate(dataloader):
@@ -189,7 +190,7 @@ print(f'train acc: {evaluate(train_dataloader):.3f}%')
 
 # # Save model
 
-# In[ ]:
+# In[11]:
 
 
 def save(pathname):
@@ -199,7 +200,7 @@ def save(pathname):
 
 # # Load model
 
-# In[ ]:
+# In[12]:
 
 
 def load(pathname):
@@ -210,7 +211,7 @@ def load(pathname):
 
 # # Command line to convert this notebook to a python file, the reason is for readability of the code from github lol
 
-# In[ ]:
+# In[13]:
 
 
 get_ipython().system('jupyter nbconvert --to script Classifier.ipynb')
@@ -218,7 +219,7 @@ get_ipython().system('jupyter nbconvert --to script Classifier.ipynb')
 
 # # todo possibly do the image display thing/ https://pytorch.org/tutorials/beginner/introyt/introyt1_tutorial.html / tune hyperparams
 
-# In[ ]:
+# In[13]:
 
 
 

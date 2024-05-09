@@ -153,3 +153,4 @@ cython_debug/
 /cheems/
 /data/flowers-102/
 /iamLeCun5/
+*.pth
