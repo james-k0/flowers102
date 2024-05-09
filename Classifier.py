@@ -48,7 +48,7 @@ trainingData = datasets.Flowers102(
     transform = transforms.Compose([
         transforms.Resize((256,256)),
         # transforms.RandomResizedCrop((256, 256),antialias=True),
-        transforms.RandomRotation(30),
+        transforms.RandomRotation(30), 
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         # transforms.Normalize([0.5,],[0.2,])
@@ -101,10 +101,11 @@ class NeuralNet(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),#half size
         )
         self.classifier = nn.Sequential(
-            nn.Linear(64*64*64 ,1024),
+            nn.Linear(64*64*64 ,4096),
             nn.ReLU(),
-            nn.Dropout(0.2), #add a bit of randomness for some fun  + generality
-            nn.Linear(1024,102),
+            nn.Dropout(), #add a bit of randomness for some fun  + generality
+            nn.Linear(4096,102),
+            nn.LogSoftmax(dim=1)
         )
         
         
@@ -166,7 +167,7 @@ plt.show()
 
 # # Display the training, testing, validation accuracy
 
-# In[10]:
+# In[ ]:
 
 
 def evaluate(dataloader):
@@ -190,7 +191,7 @@ print(f'train acc: {evaluate(train_dataloader):.3f}%')
 
 # # Save model
 
-# In[11]:
+# In[ ]:
 
 
 def save(pathname):
@@ -200,7 +201,7 @@ def save(pathname):
 
 # # Load model
 
-# In[12]:
+# In[ ]:
 
 
 def load(pathname):
@@ -211,7 +212,7 @@ def load(pathname):
 
 # # Command line to convert this notebook to a python file, the reason is for readability of the code from github lol
 
-# In[13]:
+# In[ ]:
 
 
 get_ipython().system('jupyter nbconvert --to script Classifier.ipynb')
@@ -219,7 +220,7 @@ get_ipython().system('jupyter nbconvert --to script Classifier.ipynb')
 
 # # todo possibly do the image display thing/ https://pytorch.org/tutorials/beginner/introyt/introyt1_tutorial.html / tune hyperparams
 
-# In[13]:
+# In[ ]:
 
 
 
