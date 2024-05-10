@@ -3,7 +3,7 @@
 
 # # Lets import some things
 
-# In[16]:
+# In[ ]:
 
 
 import numpy as np
@@ -15,11 +15,12 @@ import torch.nn as nn
 import torchvision
 from torchvision import datasets
 import torchvision.transforms.v2 as transforms
+import time
 
 
 # # Decide if cuda
 
-# In[17]:
+# In[ ]:
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -29,16 +30,16 @@ torch.backends.cudnn.benchmark = True
 
 # # Load dataset
 
-# In[18]:
+# In[ ]:
 
 
-batchsize = 16
+batchsize = 32
 num_classes = 102
-learning_rate = 0.001
-num_epochs = 100
+learning_rate = 0.0001
+num_epochs = 2  0
 
 
-# In[19]:
+# In[ ]:
 
 
 trainingData = datasets.Flowers102(
@@ -51,6 +52,7 @@ trainingData = datasets.Flowers102(
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(30), 
         transforms.ColorJitter(contrast=0.1,hue=0.1,brightness=0.1, saturation=0.1),
+        transforms.RandomAffine(degrees=0,translate=(0.1,0.1)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
@@ -75,7 +77,7 @@ valData = datasets.Flowers102(
 )
 
 
-# In[20]:
+# In[ ]:
 
 
 print(f'training data has: {len(trainingData)} images')
@@ -85,32 +87,32 @@ print(f'test data has: {len(testData)} images')
 
 # # Get some dataloaders
 
-# In[21]:
+# In[ ]:
 
 
-train_dataloader = DataLoader(trainingData, batch_size=batchsize, shuffle=True, num_workers=4, pin_memory=True, persistent_workers=True, prefetch_factor=6)
+train_dataloader = DataLoader(trainingData, batch_size=batchsize, shuffle=True, num_workers=12, pin_memory=True, persistent_workers=True,prefetch_factor=6)
 test_dataloader = DataLoader(testData, batch_size=batchsize, shuffle=False, num_workers=4, pin_memory=True)
 val_dataloader = DataLoader(valData, batch_size=batchsize, shuffle=False, num_workers=4, pin_memory=True)
 
 
 # # Neural Network class
 
-# In[22]:
+# In[ ]:
 
 
 class NeuralNet(nn.Module):
     def __init__(self):
         super(NeuralNet, self).__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(3,32,kernel_size=3,padding=1),
+            nn.Conv2d(3,32,kernel_size=3,padding=1,bias=False),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),#half size stride defaults to kernel size
-            nn.Conv2d(32,64,kernel_size=3,padding=1),
+            nn.Conv2d(32,64,kernel_size=3,padding=1,bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(64,128,kernel_size=3,padding=1),
+            nn.Conv2d(64,128,kernel_size=3,padding=1,bias=False),
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
@@ -134,7 +136,7 @@ class NeuralNet(nn.Module):
 
 # # Model = something
 
-# In[23]:
+# In[ ]:
 
 
 model = NeuralNet().to(device, non_blocking=True)
@@ -144,12 +146,13 @@ optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
 # # Actually do the training, needs to print less often
 
-# In[24]:
+# In[ ]:
 
 
 def train():
     loss_per_epoch = [] # clear all data incase retraining
     for epoch in range(num_epochs):
+        epoch_start = time.time()
         running_loss = 0.0
         batches = 0
         for i, (images,labels) in enumerate(train_dataloader):
@@ -164,13 +167,15 @@ def train():
             running_loss += loss.item()
             batches +=1
         loss_per_epoch.append(running_loss / batches)
-        print(f'Epoch: {epoch+1}, Avg Loss: {running_loss/batches:4f}, Num Batches: {batches}')
+        epoch_length = time.time() - epoch_start
+        val_acc = evaluate(val_dataloader)
+        print(f'Epoch: {epoch+1}, Avg Loss: {running_loss/batches:4f}, Num Batches: {batches}, Epoch Time: {epoch_length:.2f}, Val Acc: {val_acc:.3f}%')
     return loss_per_epoch
 
 
 # # Plot the avg loss against epochs
 
-# In[25]:
+# In[ ]:
 
 
 def plot_train(epoch_losses):
@@ -182,7 +187,7 @@ def plot_train(epoch_losses):
 
 # # Display the training, testing, validation accuracy
 
-# In[26]:
+# In[ ]:
 
 
 def evaluate(dataloader):
@@ -204,7 +209,7 @@ def evaluate(dataloader):
 # print(f'train acc: {evaluate(train_dataloader):.3f}%')
 
 
-# In[27]:
+# In[ ]:
 
 
 def all_eval():
@@ -215,7 +220,7 @@ def all_eval():
 
 # # Save model
 
-# In[28]:
+# In[ ]:
 
 
 def save(pathname):
@@ -225,7 +230,7 @@ def save(pathname):
 
 # # Load model
 
-# In[29]:
+# In[ ]:
 
 
 def load(pathname):
@@ -234,7 +239,7 @@ def load(pathname):
     print(f'Loaded model from {pathname}.pth')
 
 
-# In[30]:
+# In[ ]:
 
 
 # def main():
@@ -252,10 +257,17 @@ if __name__ == '__main__':
 
 # # Command line to convert this notebook to a python file, the reason is for readability of the code from github lol
 
+# In[1]:
+
+
+def convert():
+    get_ipython().system('jupyter nbconvert --to script Classifier.ipynb')
+
+
 # In[ ]:
 
 
-get_ipython().system('jupyter nbconvert --to script Classifier.ipynb')
+convert()
 
 
 # # todo possibly do the image display thing/ https://pytorch.org/tutorials/beginner/introyt/introyt1_tutorial.html / tune hyperparams
