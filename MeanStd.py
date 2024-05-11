@@ -1,0 +1,23 @@
+import torch
+from torchvision import datasets,transforms
+
+data_transform = transforms.Compose([
+    transforms.Resize((224,224)), #assuming that the transform to 224 is consistent with ur preprocessing
+    transforms.ToTensor()
+])
+
+dataset = datasets.ImageFolder(root='data/flowers-102',transform=data_transform)
+
+device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+channels = 3
+mean = torch.zeros(channels)
+std = torch.zeros(channels)
+
+for image, _ in dataset:
+    mean+= torch.mean(image, dim=(1,2))
+    std+= torch.std(image,dim=(1,2))
+mean/= len(dataset)
+std/= len(dataset)
+
+print('Mean', mean.cpu().numpy())
+print('Std', std.cpu().numpy())
