@@ -20,7 +20,7 @@ from torchsummary import summary
 import scipy.io
 
 
-# In[ ]:
+# In[34]:
 
 
 mat = scipy.io.loadmat('data/flowers-102/imagelabels.mat')
@@ -29,7 +29,7 @@ print(len(mat['labels'][0])) #it turns out the image labels are numbers and i ca
 
 # # I found a text file with the classnames
 
-# In[ ]:
+# In[35]:
 
 
 names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet pea','english marigold','tiger lily','moon orchid','bird of paradise','monkshood','globe thistle','snapdragon',"colt's foot",'king protea','spear thistle','yellow iris','globe-flower','purple coneflower','peruvian lily','balloon flower','giant white arum lily','fire lily','pincushion flower','fritillary','red ginger','grape hyacinth','corn poppy','prince of wales feathers','stemless gentian','artichoke','sweet william','carnation','garden phlox','love in the mist','mexican aster','alpine sea holly','ruby-lipped cattleya','cape flower','great masterwort','siam tulip','lenten rose','barbeton daisy','daffodil','sword lily','poinsettia','bolero deep blue','wallflower','marigold','buttercup','oxeye daisy','common dandelion','petunia','wild pansy','primula','sunflower','pelargonium','bishop of llandaff','gaura','geranium','orange dahlia','pink-yellow dahlia?','cautleya spicata','japanese anemone','black-eyed susan','silverbush','californian poppy','osteospermum','spring crocus','bearded iris','windflower','tree poppy','gazania','azalea','water lily','rose','thorn apple','morning glory','passion flower','lotus','toad lily','anthurium','frangipani','clematis','hibiscus','columbine','desert-rose','tree mallow','magnolia','cyclamen ','watercress','canna lily','hippeastrum ','bee balm','ball moss','foxglove','bougainvillea','camellia','mallow','mexican petunia','bromelia','blanket flower','trumpet creeper','blackberry lily']
@@ -37,7 +37,7 @@ names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet 
 
 # # Decide if cuda
 
-# In[ ]:
+# In[36]:
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,7 +47,7 @@ torch.backends.cudnn.benchmark = True
 
 # # Load dataset
 
-# In[ ]:
+# In[37]:
 
 
 trainingData = datasets.Flowers102(
@@ -56,10 +56,10 @@ trainingData = datasets.Flowers102(
     download = True,
     transform = transforms.Compose([
         transforms.Resize((224,224)),
-        transforms.RandomResizedCrop((256, 256),antialias=True),
+        # transforms.RandomResizedCrop((224, 224),antialias=True),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(15), 
-        transforms.ColorJitter(contrast=0.08,brightness=0.08, saturation=0.08),
+        # transforms.ColorJitter(contrast=0.08,brightness=0.08, saturation=0.08,hue=0.02),#becaise the dataset will evidently be sensitve to colour might want to avoid this one
         transforms.RandomAffine(degrees=10,translate=(0.1,0.1),scale=(0.9,1.1),shear=0.15),
         transforms.GaussianBlur(kernel_size=(3,3),sigma=(0.1,2.0)),
         transforms.ToTensor(),
@@ -88,7 +88,7 @@ valData = datasets.Flowers102(
 )
 
 
-# In[ ]:
+# In[38]:
 
 
 print(f'training data has: {len(trainingData)} images')
@@ -98,7 +98,7 @@ print(f'test data has: {len(testData)} images')
 
 # # Neural Network class
 
-# In[ ]:
+# In[39]:
 
 
 class NeuralNet(nn.Module):
@@ -106,39 +106,52 @@ class NeuralNet(nn.Module):
         super(NeuralNet, self).__init__()
         self.features = nn.Sequential(
             #conv1
-            nn.Conv2d(3,32,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(3,32,kernel_size=3,padding=1),#it is my understanding that batch norm means that i need not use bias which is the default
+            nn.ReLU(),
+            nn.Conv2d(32,32,kernel_size=2,padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
+            nn.Dropout(0.1),
             nn.MaxPool2d(kernel_size=2),#128x128
             #conv2
-            nn.Conv2d(32,64,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(32,64,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64,64,kernel_size=3,padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),#64x64
             #conv3
-            nn.Conv2d(64,128,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(64,128,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128,128,kernel_size=3,padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),#32x32
             #conv4
-            nn.Conv2d(128,256,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(128,256,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(256,256, kernel_size=3,padding=1),
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),#16x16
+            nn.Dropout(0.3),
             #conv5
-            nn.Conv2d(256,512,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(256,512,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512,512,kernel_size=3,padding=1),
             nn.BatchNorm2d(512),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)#8x8
+            nn.MaxPool2d(kernel_size=2),#8x8
+            nn.Dropout(0.2)
         )
         
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1))
         
         self.classifier = nn.Sequential(
-            nn.Dropout(0.4),
+            nn.Dropout(0.3), #you can apply more aggresive dropout in these full connected layers since units will be less relied upon
             nn.Linear(512,1024),
             nn.ReLU(),
-            nn.Dropout(0.4),
+            nn.Dropout(0.2),
             nn.Linear(1024,num_classes),
             nn.LogSoftmax(dim=1)
         )
@@ -154,12 +167,12 @@ class NeuralNet(nn.Module):
 
 # # Training loop
 
-# In[ ]:
+# In[40]:
 
 
 def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device):
     cost = nn.CrossEntropyLoss().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate)
     
     loss_per_epoch = [] # clear all data incase retraining
     val_epochs = []
@@ -173,10 +186,12 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
         batches = 0
         
         for i, (images,labels) in enumerate(train_dataloader):
+            optimizer.zero_grad()
+            
             images = images.to(device)
             labels = labels.to(device)
             outputs = model(images)
-            optimizer.zero_grad()
+            
             loss = cost(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -203,16 +218,16 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
         # print(f'\n Last lr {float(scheduler.get_last_lr()[0])}, Epoch: {epoch+1}')
         print(f'Epoch: {epoch+1}, Avg Loss: {avg_loss:4f}, Num Batches: {batches}, Epoch Time: {epoch_length:.2f}, Validation Acc: {val_acc:.3f}%, Training Acc: {tra_acc:.3f}%')
         
-        if quit_early_counter >= 3:
+        if quit_early_counter >= 5:
             print('val acc isnt improving over last 5 so stop training')
             break
             
-    return np.array(loss_per_epoch), np.array(val_epochs)
+    return np.array(loss_per_epoch), np.array(val_epochs), np.array(tra_epochs)
 
 
 # # Plot the avg loss against epochs
 
-# In[ ]:
+# In[41]:
 
 
 def plot_array(array,name):
@@ -224,7 +239,7 @@ def plot_array(array,name):
 
 # # Display the training, testing, validation accuracy
 
-# In[ ]:
+# In[42]:
 
 
 def evaluate(model, dataloader, device, cost):
@@ -249,11 +264,11 @@ def evaluate(model, dataloader, device, cost):
 
 # # evaluate on test, validation and training data
 
-# In[ ]:
+# In[43]:
 
 
 def all_eval(model, device, cost):
-    accval, _= evaluate(model=model,device=device,cost=cost,dataloader=test_dataloader)
+    accval, _= evaluate(model=model,dataloader=val_dataloader,device=device,cost=cost)
     print(f'val acc: {accval:.3f}%')
     acctest, _ = evaluate(dataloader=test_dataloader,model=model,cost=cost,device=device)
     print(f'test acc: {acctest:.3f}%')
@@ -263,7 +278,7 @@ def all_eval(model, device, cost):
 
 # # Save model
 
-# In[ ]:
+# In[44]:
 
 
 def save(model, pathname):
@@ -273,7 +288,7 @@ def save(model, pathname):
 
 # # Load model
 
-# In[ ]:
+# In[45]:
 
 
 def load(model, pathname ,device):
@@ -284,7 +299,7 @@ def load(model, pathname ,device):
 
 # # Visualise samples
 
-# In[ ]:
+# In[46]:
 
 
 def visualize_samples(dataset, num_samples=5):
@@ -295,7 +310,7 @@ def visualize_samples(dataset, num_samples=5):
         sample_idx = torch.randint(len(dataset), size=(1,)).item()
         image, label = dataset[sample_idx]
 
-        # Denormalize the image
+        # Denormalize the image idk  if this is neccesary
         image = image * torch.tensor([0.26202053, 0.20857088, 0.21565172]).view(3, 1, 1) + torch.tensor([0.43554732, 0.37773556, 0.28792068]).view(3, 1, 1)
         
         # Plot the image
@@ -305,52 +320,54 @@ def visualize_samples(dataset, num_samples=5):
 
     plt.show()
 
-# Visualize samples from the training dataset
-visualize_samples(trainingData)
-#i did this to sanity check why everything i do achieves a acc of 0.98% aka a perfect guess... and the labels are correct so idk
+# Visualize samples from the test dataset
+visualize_samples(testData)
 
 
 # # main loop
 
-# In[ ]:
+# In[47]:
 
 
 if __name__ == '__main__':
-    BATCH_SIZE = 20
+    BATCH_SIZE = 64
     NUM_CLASSES = 102
-    LEARNING_RATE = 0.0003
-    NUM_EPOCHS = 100
+    LEARNING_RATE = 0.001   #0.006 works for 32
+    NUM_EPOCHS = 250
     
-    train_dataloader = DataLoader(trainingData, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, prefetch_factor=2,persistent_workers=True)
-    test_dataloader = DataLoader(testData, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+    train_dataloader = DataLoader(trainingData, batch_size=BATCH_SIZE, shuffle=True, num_workers=8, prefetch_factor=2,persistent_workers=True)
+    test_dataloader = DataLoader(testData, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, prefetch_factor=2,persistent_workers=True)
     val_dataloader = DataLoader(valData, batch_size=BATCH_SIZE, shuffle=False, num_workers=4,prefetch_factor=2,persistent_workers=True)
     # 
     model = NeuralNet(NUM_CLASSES).to(device)
     # summary(model,input_size=(3,224,224))
-    training_epoch_losses, val_acc_per = train(model=model,train_dataloader=train_dataloader, val_dataloader=val_dataloader, num_epochs=NUM_EPOCHS, learning_rate=LEARNING_RATE, device=device)
+    training_epoch_losses, val_acc_per, tra_acc_per = train(model=model,train_dataloader=train_dataloader, val_dataloader=val_dataloader, num_epochs=NUM_EPOCHS, learning_rate=LEARNING_RATE, device=device)
     # 
     # 
     plot_array(training_epoch_losses,'training epoch losses')
     plot_array(val_acc_per,'validation accuracy per epoch')
+    plot_array(tra_acc_per,'training accuracy per epoch')
     all_eval(model=model,device=device,cost=torch.nn.CrossEntropyLoss())
 
 
 # # runs a command that converts this notebook to a py script
 
-# In[2]:
+# In[ ]:
 
 
 def convert():
     get_ipython().system('jupyter nbconvert --to script Classifier.ipynb')
 
 
-# In[1]:
+# In[ ]:
 
 
 convert()
 
 
 # # todo possibly do the image display thing/ https://pytorch.org/tutorials/beginner/introyt/introyt1_tutorial.html / tune hyperparams
+
+# # Sanity checking
 
 # In[ ]:
 
