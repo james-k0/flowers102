@@ -3,7 +3,7 @@
 
 # # Lets import some things
 
-# In[ ]:
+# In[1]:
 
 
 import numpy as np
@@ -20,7 +20,7 @@ from torchsummary import summary
 import scipy.io
 
 
-# In[34]:
+# In[2]:
 
 
 mat = scipy.io.loadmat('data/flowers-102/imagelabels.mat')
@@ -29,7 +29,7 @@ print(len(mat['labels'][0])) #it turns out the image labels are numbers and i ca
 
 # # I found a text file with the classnames
 
-# In[35]:
+# In[3]:
 
 
 names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet pea','english marigold','tiger lily','moon orchid','bird of paradise','monkshood','globe thistle','snapdragon',"colt's foot",'king protea','spear thistle','yellow iris','globe-flower','purple coneflower','peruvian lily','balloon flower','giant white arum lily','fire lily','pincushion flower','fritillary','red ginger','grape hyacinth','corn poppy','prince of wales feathers','stemless gentian','artichoke','sweet william','carnation','garden phlox','love in the mist','mexican aster','alpine sea holly','ruby-lipped cattleya','cape flower','great masterwort','siam tulip','lenten rose','barbeton daisy','daffodil','sword lily','poinsettia','bolero deep blue','wallflower','marigold','buttercup','oxeye daisy','common dandelion','petunia','wild pansy','primula','sunflower','pelargonium','bishop of llandaff','gaura','geranium','orange dahlia','pink-yellow dahlia?','cautleya spicata','japanese anemone','black-eyed susan','silverbush','californian poppy','osteospermum','spring crocus','bearded iris','windflower','tree poppy','gazania','azalea','water lily','rose','thorn apple','morning glory','passion flower','lotus','toad lily','anthurium','frangipani','clematis','hibiscus','columbine','desert-rose','tree mallow','magnolia','cyclamen ','watercress','canna lily','hippeastrum ','bee balm','ball moss','foxglove','bougainvillea','camellia','mallow','mexican petunia','bromelia','blanket flower','trumpet creeper','blackberry lily']
@@ -37,7 +37,7 @@ names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet 
 
 # # Decide if cuda
 
-# In[36]:
+# In[4]:
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,7 +47,7 @@ torch.backends.cudnn.benchmark = True
 
 # # Load dataset
 
-# In[37]:
+# In[5]:
 
 
 trainingData = datasets.Flowers102(
@@ -55,15 +55,15 @@ trainingData = datasets.Flowers102(
     split = "train",
     download = True,
     transform = transforms.Compose([
-        transforms.Resize((224,224)),
-        # transforms.RandomResizedCrop((224, 224),antialias=True),
+        transforms.RandomResizedCrop((256, 256),antialias=True,scale=(0.85,1.0)),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(15), 
-        # transforms.ColorJitter(contrast=0.08,brightness=0.08, saturation=0.08,hue=0.02),#becaise the dataset will evidently be sensitve to colour might want to avoid this one
-        transforms.RandomAffine(degrees=10,translate=(0.1,0.1),scale=(0.9,1.1),shear=0.15),
-        transforms.GaussianBlur(kernel_size=(3,3),sigma=(0.1,2.0)),
+        transforms.RandomRotation(20), 
+        transforms.ColorJitter(contrast=0.1,brightness=0.1, saturation=0.1,hue=0.05),#becaise the dataset will evidently be sensitve to colour might want to avoid this one
+        transforms.RandomAffine(degrees=15,translate=(0.1,0.1),scale=(0.9,1.1),shear=0.15),
+        # transforms.GaussianBlur(kernel_size=(3,3),sigma=(0.1,0.8)),
+        transforms.Resize((224,224)),
         transforms.ToTensor(),
-        transforms.Normalize([0.43554732, 0.37773556, 0.28792068], [0.26202053, 0.20857088, 0.21565172])
+        transforms.Normalize([0.432, 0.381, 0.296], [0.258,  0.209, 0.221] )
     ])
 )
 testData = datasets.Flowers102(
@@ -73,7 +73,7 @@ testData = datasets.Flowers102(
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize([0.43554732, 0.37773556, 0.28792068], [0.26202053, 0.20857088, 0.21565172])
+        transforms.Normalize([0.432, 0.381, 0.296], [0.258,  0.209, 0.221] )
     ])
 )
 valData = datasets.Flowers102(
@@ -83,12 +83,12 @@ valData = datasets.Flowers102(
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize([0.43554732, 0.37773556, 0.28792068], [0.26202053, 0.20857088, 0.21565172])
+        transforms.Normalize([0.432, 0.381, 0.296], [0.258,  0.209, 0.221] )
     ])
 )
 
 
-# In[38]:
+# In[6]:
 
 
 print(f'training data has: {len(trainingData)} images')
@@ -98,94 +98,125 @@ print(f'test data has: {len(testData)} images')
 
 # # Neural Network class
 
-# In[39]:
+# In[7]:
 
 
 class NeuralNet(nn.Module):
     def __init__(self,num_classes):
         super(NeuralNet, self).__init__()
         self.features = nn.Sequential(
-            #conv1
-            nn.Conv2d(3,32,kernel_size=3,padding=1),#it is my understanding that batch norm means that i need not use bias which is the default
-            nn.ReLU(),
-            nn.Conv2d(32,32,kernel_size=2,padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.MaxPool2d(kernel_size=2),#128x128
-            #conv2
-            nn.Conv2d(32,64,kernel_size=3,padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64,64,kernel_size=3,padding=1),
+            #1
+            nn.Conv2d(3, 64, kernel_size=3,padding=1,bias=False),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),#64x64
-            #conv3
-            nn.Conv2d(64,128,kernel_size=3,padding=1),
-            nn.ReLU(),
-            nn.Conv2d(128,128,kernel_size=3,padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2,2),
+            #2
+            # nn.Conv2d(64,64,kernel_size=3,padding=1,bias=False),
+            # nn.BatchNorm2d(64),
+            # nn.ReLU(inplace=True),
+            #3
+            nn.Conv2d(64,128,kernel_size=3,padding=1,bias=False),
             nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),#32x32
-            #conv4
-            nn.Conv2d(128,256,kernel_size=3,padding=1),
-            nn.ReLU(),
-            nn.Conv2d(256,256, kernel_size=3,padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2,stride=2),
+            #4
+            # nn.Conv2d(128,128,kernel_size=3,padding=1,bias=False),
+            # nn.BatchNorm2d(128),
+            # nn.ReLU(inplace=True),
+            # nn.MaxPool2d(kernel_size=2,stride=2),
+            #5
+            nn.Conv2d(128,256,kernel_size=3,padding=1,bias=False),
             nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),#16x16
-            nn.Dropout(0.3),
-            #conv5
-            nn.Conv2d(256,512,kernel_size=3,padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512,512,kernel_size=3,padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2,stride=2),
+            #6
+            # nn.Conv2d(256,256,kernel_size=3,padding=1,bias=False),
+            # nn.BatchNorm2d(256),
+            # nn.ReLU(inplace=True),
+            #7
+            # nn.Conv2d(256,256,kernel_size=3,padding=1,bias=False),
+            # nn.BatchNorm2d(256),
+            # nn.ReLU(inplace=True),
+            # nn.MaxPool2d(kernel_size=2,stride=2),
+            #8
+            nn.Conv2d(256,512,kernel_size=3,padding=1,bias=False),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),#8x8
-            nn.Dropout(0.2)
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2,2),
+            #9
+            # nn.Conv2d(512,512,kernel_size=3,padding=1,bias=False),
+            # nn.BatchNorm2d(512),
+            # nn.ReLU(inplace=True),
+            #10
+            nn.Conv2d(512,512,kernel_size=3,padding=1,bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2,stride=2),
+            #11
+            # nn.Conv2d(512,512,kernel_size=3,padding=1,bias=False),
+            # nn.BatchNorm2d(512),
+            # nn.ReLU(inplace=True),
+            #12
+            # nn.Conv2d(512,512,kernel_size=3,padding=1,bias=False),
+            # nn.BatchNorm2d(512),
+            # nn.ReLU(inplace=True),
+            #13
+            nn.Conv2d(512,512,kernel_size=3,padding=1,bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2,2),
+            nn.Dropout(0.1)
         )
-        
-        self.global_avg_pool = nn.AdaptiveAvgPool2d((1,1))
         
         self.classifier = nn.Sequential(
-            nn.Dropout(0.3), #you can apply more aggresive dropout in these full connected layers since units will be less relied upon
-            nn.Linear(512,1024),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(1024,num_classes),
-            nn.LogSoftmax(dim=1)
+            nn.Dropout(0.3),
+            nn.Linear(4*4*512,2048), #14
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            # nn.Linear(2048,512), #15
+            # nn.ReLU(inplace=True),
+            # nn.Dropout(0.2),
+            nn.Linear(2048,num_classes), #16
+            # nn.LogSoftmax(dim=1)
+            nn.ReLU(inplace=True),
         )
         
+        self.avgpool = nn.AdaptiveAvgPool2d((4,4))
         
     def forward(self, x):
-        x= self.features(x)
-        x= self.global_avg_pool(x)
-        x= x.view(x.size(0),-1)
-        x = self.classifier(x)
+        x=self.features(x)
+        x=self.avgpool(x)
+        x=torch.flatten(x,1)
+        x= self.classifier(x)
         return x
 
 
 # # Training loop
 
-# In[40]:
+# In[8]:
 
 
 def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device):
     cost = nn.CrossEntropyLoss().to(device)
-    optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,weight_decay=0.00075)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate,momentum=0.92, weight_decay=0.00075)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,patience=4,factor=0.1)
     
     loss_per_epoch = [] # clear all data incase retraining
     val_epochs = []
     tra_epochs = []
     quit_early_counter = 0
     last_epoch_loss = None
+    
+    #for each epoch
     for epoch in range(num_epochs):
         epoch_start = time.time()
         model.train()
         running_loss = 0.0
         batches = 0
         
-        for i, (images,labels) in enumerate(train_dataloader):
+        #for each batch
+        for i, (images,labels) in enumerate(train_dataloader):#batch
             optimizer.zero_grad()
             
             images = images.to(device)
@@ -195,6 +226,7 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
             loss = cost(outputs, labels)
             loss.backward()
             optimizer.step()
+            
             
             running_loss += loss.item() #so this line is a sync point for the cpu and gpu commenting it out greatly reduces the training time (up to 25%  in my testing)
             batches +=1
@@ -206,7 +238,8 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
         val_epochs.append(val_acc)
         tra_acc, train_avg_loss = evaluate(model=model,dataloader=train_dataloader,device=device,cost=cost)
         tra_epochs.append(tra_acc)
-        # scheduler.step(val_loss)
+        
+        scheduler.step(val_avg_loss)
         
         if last_epoch_loss is not None and abs(last_epoch_loss - avg_loss)<0.01:
             quit_early_counter += 1
@@ -215,31 +248,37 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
         last_epoch_loss = avg_loss
         
         epoch_length = time.time() - epoch_start
+        
         # print(f'\n Last lr {float(scheduler.get_last_lr()[0])}, Epoch: {epoch+1}')
-        print(f'Epoch: {epoch+1}, Avg Loss: {avg_loss:4f}, Num Batches: {batches}, Epoch Time: {epoch_length:.2f}, Validation Acc: {val_acc:.3f}%, Training Acc: {tra_acc:.3f}%')
+        
+        print(f'\nEpoch:{epoch+1}, Num Batches:{batches}, Avg Loss:{avg_loss:4f}, Epoch Took:{epoch_length:.1f}s, Validation:{val_acc:.3f}% acc {val_avg_loss:.3f} loss, Training:{tra_acc:.3f}% acc {train_avg_loss:.3f} loss')
+        # print(f'epoch down: {epoch+1}')
         
         if quit_early_counter >= 5:
             print('val acc isnt improving over last 5 so stop training')
             break
-            
+        if tra_acc >=99:
+            print('You converged to 99% on training data, its worth stopping here')
+            break            
+    print(avg_loss,tra_acc,val_acc, learning_rate, train_dataloader.batch_size)
+    all_eval(model=model,device=device,cost=nn.CrossEntropyLoss())
     return np.array(loss_per_epoch), np.array(val_epochs), np.array(tra_epochs)
 
 
 # # Plot the avg loss against epochs
 
-# In[41]:
+# In[9]:
 
 
 def plot_array(array,name):
-    plt.plot(array, label=f'{name}')
-    # plt.plot(validation_epoch_losses,label='Validation Loss')   
+    plt.plot(array, label=f'{name}')  
     plt.legend()
     plt.show()
 
 
 # # Display the training, testing, validation accuracy
 
-# In[42]:
+# In[10]:
 
 
 def evaluate(model, dataloader, device, cost):
@@ -264,7 +303,7 @@ def evaluate(model, dataloader, device, cost):
 
 # # evaluate on test, validation and training data
 
-# In[43]:
+# In[11]:
 
 
 def all_eval(model, device, cost):
@@ -278,7 +317,7 @@ def all_eval(model, device, cost):
 
 # # Save model
 
-# In[44]:
+# In[12]:
 
 
 def save(model, pathname):
@@ -288,7 +327,7 @@ def save(model, pathname):
 
 # # Load model
 
-# In[45]:
+# In[13]:
 
 
 def load(model, pathname ,device):
@@ -299,7 +338,7 @@ def load(model, pathname ,device):
 
 # # Visualise samples
 
-# In[46]:
+# In[14]:
 
 
 def visualize_samples(dataset, num_samples=5):
@@ -310,8 +349,8 @@ def visualize_samples(dataset, num_samples=5):
         sample_idx = torch.randint(len(dataset), size=(1,)).item()
         image, label = dataset[sample_idx]
 
-        # Denormalize the image idk  if this is neccesary
-        image = image * torch.tensor([0.26202053, 0.20857088, 0.21565172]).view(3, 1, 1) + torch.tensor([0.43554732, 0.37773556, 0.28792068]).view(3, 1, 1)
+        # Denormalize the image
+        image = image * torch.tensor([0.258,  0.209, 0.221] ).view(3, 1, 1) + torch.tensor([0.432, 0.381, 0.296]).view(3, 1, 1)
         
         # Plot the image
         axes[i].imshow(image.permute(1, 2, 0))
@@ -320,34 +359,52 @@ def visualize_samples(dataset, num_samples=5):
 
     plt.show()
 
-# Visualize samples from the test dataset
+# Visualize samples from the test dataset, something for sanity really
 visualize_samples(testData)
 
 
 # # main loop
 
-# In[47]:
+# In[ ]:
 
 
 if __name__ == '__main__':
-    BATCH_SIZE = 64
+    BATCH_SIZE = 18
     NUM_CLASSES = 102
-    LEARNING_RATE = 0.001   #0.006 works for 32
-    NUM_EPOCHS = 250
+    LEARNING_RATE = 0.003
+    NUM_EPOCHS = 300
     
-    train_dataloader = DataLoader(trainingData, batch_size=BATCH_SIZE, shuffle=True, num_workers=8, prefetch_factor=2,persistent_workers=True)
-    test_dataloader = DataLoader(testData, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, prefetch_factor=2,persistent_workers=True)
-    val_dataloader = DataLoader(valData, batch_size=BATCH_SIZE, shuffle=False, num_workers=4,prefetch_factor=2,persistent_workers=True)
+    train_dataloader = DataLoader(trainingData, batch_size=BATCH_SIZE, shuffle=True, num_workers=6, prefetch_factor=4,persistent_workers=True)
+    test_dataloader = DataLoader(testData, batch_size=BATCH_SIZE, shuffle=False, num_workers=6, prefetch_factor=4,persistent_workers=True)
+    val_dataloader = DataLoader(valData, batch_size=BATCH_SIZE, shuffle=False, num_workers=6,prefetch_factor=4,persistent_workers=True)
+
+    
+    
+    # lrs = [0.00001,0.0001,0.001]
+    # batch = [10,20,40]
+    # epochs = 10
+    # for lr in lrs:
+    #     for bat in batch:
+    #         train_dataloader = DataLoader(trainingData, batch_size=bat, shuffle=True, num_workers=4, prefetch_factor=2,persistent_workers=True)
+    #         test_dataloader = DataLoader(testData, batch_size=bat, shuffle=False, num_workers=2, prefetch_factor=2,persistent_workers=True)
+    #         val_dataloader = DataLoader(valData, batch_size=bat, shuffle=False, num_workers=2,prefetch_factor=4,persistent_workers=True)
+    #         train(model=model,train_dataloader=train_dataloader,val_dataloader=val_dataloader,num_epochs=epochs,learning_rate=lr,device=device)
     # 
-    model = NeuralNet(NUM_CLASSES).to(device)
     # summary(model,input_size=(3,224,224))
+    
+    
+    model = NeuralNet(NUM_CLASSES).to(device)
+    # lrs = [0.01,0.001,0.0001]
+    # for lr in lrs:
+    #     model = NeuralNet(NUM_CLASSES).to(device)
+    #     train(model=model,train_dataloader=train_dataloader,val_dataloader=val_dataloader,num_epochs=NUM_EPOCHS,learning_rate=lr,device=device)
+    # 
+    # 
     training_epoch_losses, val_acc_per, tra_acc_per = train(model=model,train_dataloader=train_dataloader, val_dataloader=val_dataloader, num_epochs=NUM_EPOCHS, learning_rate=LEARNING_RATE, device=device)
-    # 
-    # 
+
     plot_array(training_epoch_losses,'training epoch losses')
     plot_array(val_acc_per,'validation accuracy per epoch')
     plot_array(tra_acc_per,'training accuracy per epoch')
-    all_eval(model=model,device=device,cost=torch.nn.CrossEntropyLoss())
 
 
 # # runs a command that converts this notebook to a py script
@@ -365,9 +422,23 @@ def convert():
 convert()
 
 
-# # todo possibly do the image display thing/ https://pytorch.org/tutorials/beginner/introyt/introyt1_tutorial.html / tune hyperparams
+# # todo: sanity checker for top-k
 
 # # Sanity checking
+
+# In[ ]:
+
+
+def plot_pred(dataset, ):
+    fig, axes = plt.figure() 
+    sample_idx = torch.randint(len(dataset), size=(1,)).item()
+    image, label = dataset[sample_idx]
+    
+    
+    
+    
+    plt.show()
+
 
 # In[ ]:
 

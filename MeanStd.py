@@ -6,7 +6,7 @@ data_transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-dataset = datasets.ImageFolder(root='data/flowers-102',transform=data_transform)
+dataset = datasets.Flowers102(root='data',transform=data_transform,split='train')
 
 device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 channels = 3
