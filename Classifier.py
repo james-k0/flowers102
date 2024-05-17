@@ -20,7 +20,7 @@ from torchsummary import summary
 import scipy.io
 
 
-# In[20]:
+# In[ ]:
 
 
 mat = scipy.io.loadmat('data/flowers-102/imagelabels.mat')
@@ -29,7 +29,7 @@ print(len(mat['labels'][0])) #it turns out the image labels are numbers and i ca
 
 # # I found a text file with the classnames
 
-# In[21]:
+# In[ ]:
 
 
 names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet pea','english marigold','tiger lily','moon orchid','bird of paradise','monkshood','globe thistle','snapdragon',"colt's foot",'king protea','spear thistle','yellow iris','globe-flower','purple coneflower','peruvian lily','balloon flower','giant white arum lily','fire lily','pincushion flower','fritillary','red ginger','grape hyacinth','corn poppy','prince of wales feathers','stemless gentian','artichoke','sweet william','carnation','garden phlox','love in the mist','mexican aster','alpine sea holly','ruby-lipped cattleya','cape flower','great masterwort','siam tulip','lenten rose','barbeton daisy','daffodil','sword lily','poinsettia','bolero deep blue','wallflower','marigold','buttercup','oxeye daisy','common dandelion','petunia','wild pansy','primula','sunflower','pelargonium','bishop of llandaff','gaura','geranium','orange dahlia','pink-yellow dahlia?','cautleya spicata','japanese anemone','black-eyed susan','silverbush','californian poppy','osteospermum','spring crocus','bearded iris','windflower','tree poppy','gazania','azalea','water lily','rose','thorn apple','morning glory','passion flower','lotus','toad lily','anthurium','frangipani','clematis','hibiscus','columbine','desert-rose','tree mallow','magnolia','cyclamen ','watercress','canna lily','hippeastrum ','bee balm','ball moss','foxglove','bougainvillea','camellia','mallow','mexican petunia','bromelia','blanket flower','trumpet creeper','blackberry lily']
@@ -37,7 +37,7 @@ names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet 
 
 # # Decide if cuda
 
-# In[22]:
+# In[ ]:
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,7 +47,7 @@ torch.backends.cudnn.benchmark = True
 
 # # Load dataset
 
-# In[23]:
+# In[ ]:
 
 
 trainingData = datasets.Flowers102(
@@ -59,7 +59,7 @@ trainingData = datasets.Flowers102(
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(20), 
         transforms.ColorJitter(contrast=0.1,brightness=0.1, saturation=0.1,hue=0.05),#becaise the dataset will evidently be sensitve to colour might want to avoid this one
-        # transforms.RandomAffine(degrees=0,translate=(0.1,0.1),scale=(0.9,1.1),shear=0.15),
+        transforms.RandomAffine(degrees=0,translate=(0.1,0.1),scale=(0.9,1.1),shear=0.1),
         # transforms.GaussianBlur(kernel_size=(2,2),sigma=(0.1,0.8)),
         transforms.Resize((224,224)),
         transforms.ToTensor(),
@@ -88,7 +88,7 @@ valData = datasets.Flowers102(
 )
 
 
-# In[24]:
+# In[ ]:
 
 
 print(f'training data has: {len(trainingData)} images')
@@ -98,7 +98,7 @@ print(f'test data has: {len(testData)} images')
 
 # # Neural Network class
 
-# In[25]:
+# In[ ]:
 
 
 class NeuralNet(nn.Module):
@@ -161,13 +161,13 @@ class NeuralNet(nn.Module):
 
 # # Training loop
 
-# In[26]:
+# In[ ]:
 
 
 def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device):
     cost = nn.CrossEntropyLoss(label_smoothing=0.2).to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.89, weight_decay=0.002)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=5, factor=0.8, mode='min')
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.002)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=5, factor=0.4, mode='min')
     
     best_val_acc = 0.0
     best_epoch = 0
@@ -208,10 +208,7 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
         
         scheduler.step(val_avg_loss)
         
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            best_epoch = epoch
-            save(model, "best_model_checkpoint")
+        
         
         if last_epoch_loss is not None and abs(last_epoch_loss - avg_loss) < 0.01:
             quit_early_counter += 1
@@ -222,6 +219,11 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
         epoch_length = time.time() - epoch_start
         
         print(f'\nEpoch: {epoch+1}, Num Batches: {batches}, Avg Loss: {avg_loss:.4f}, Epoch Took: {epoch_length:.1f}s, Validation: {val_acc:.3f}% acc, {val_avg_loss:.3f} loss, Training: {tra_acc:.3f}% acc, {train_avg_loss:.3f} loss')
+        
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            best_epoch = epoch
+            save(model, "best_model_checkpoint")
         
         if quit_early_counter >= 5:
             print('Validation accuracy hasn\'t improved over the last 5 epochs. Stopping training.')
@@ -241,7 +243,7 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
 
 # # Plot the avg loss against epochs
 
-# In[27]:
+# In[ ]:
 
 
 def plot_array(array,name):
@@ -252,7 +254,7 @@ def plot_array(array,name):
 
 # # Display the training, testing, validation accuracy
 
-# In[28]:
+# In[ ]:
 
 
 def evaluate(model, dataloader, device, cost):
@@ -277,7 +279,7 @@ def evaluate(model, dataloader, device, cost):
 
 # # evaluate on test, validation and training data
 
-# In[29]:
+# In[ ]:
 
 
 def all_eval(model, device, cost):
@@ -291,7 +293,7 @@ def all_eval(model, device, cost):
 
 # # Save model
 
-# In[30]:
+# In[ ]:
 
 
 def save(model, pathname):
@@ -301,7 +303,7 @@ def save(model, pathname):
 
 # # Load model
 
-# In[31]:
+# In[ ]:
 
 
 def load(model, pathname ,device):
@@ -312,7 +314,7 @@ def load(model, pathname ,device):
 
 # # Visualise samples
 
-# In[32]:
+# In[ ]:
 
 
 def visualize_samples(dataset, num_samples=5):
@@ -339,13 +341,13 @@ visualize_samples(testData)
 
 # # main loop
 
-# In[33]:
+# In[ ]:
 
 
 if __name__ == '__main__':
-    BATCH_SIZE = 12
+    BATCH_SIZE = 8
     NUM_CLASSES = 102
-    LEARNING_RATE = 0.00025#0.0002
+    LEARNING_RATE = 0.00015#0.0002
     NUM_EPOCHS = 200
     
     train_dataloader = DataLoader(trainingData, batch_size=BATCH_SIZE, shuffle=True, num_workers=6, prefetch_factor=4,persistent_workers=True)
