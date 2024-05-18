@@ -3,7 +3,7 @@
 
 # # Lets import some things
 
-# In[ ]:
+# In[55]:
 
 
 import numpy as np
@@ -20,7 +20,7 @@ from torchsummary import summary
 import scipy.io
 
 
-# In[ ]:
+# In[56]:
 
 
 mat = scipy.io.loadmat('data/flowers-102/imagelabels.mat')
@@ -29,7 +29,7 @@ print(len(mat['labels'][0])) #it turns out the image labels are numbers and i ca
 
 # # I found a text file with the classnames
 
-# In[ ]:
+# In[57]:
 
 
 names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet pea','english marigold','tiger lily','moon orchid','bird of paradise','monkshood','globe thistle','snapdragon',"colt's foot",'king protea','spear thistle','yellow iris','globe-flower','purple coneflower','peruvian lily','balloon flower','giant white arum lily','fire lily','pincushion flower','fritillary','red ginger','grape hyacinth','corn poppy','prince of wales feathers','stemless gentian','artichoke','sweet william','carnation','garden phlox','love in the mist','mexican aster','alpine sea holly','ruby-lipped cattleya','cape flower','great masterwort','siam tulip','lenten rose','barbeton daisy','daffodil','sword lily','poinsettia','bolero deep blue','wallflower','marigold','buttercup','oxeye daisy','common dandelion','petunia','wild pansy','primula','sunflower','pelargonium','bishop of llandaff','gaura','geranium','orange dahlia','pink-yellow dahlia?','cautleya spicata','japanese anemone','black-eyed susan','silverbush','californian poppy','osteospermum','spring crocus','bearded iris','windflower','tree poppy','gazania','azalea','water lily','rose','thorn apple','morning glory','passion flower','lotus','toad lily','anthurium','frangipani','clematis','hibiscus','columbine','desert-rose','tree mallow','magnolia','cyclamen ','watercress','canna lily','hippeastrum ','bee balm','ball moss','foxglove','bougainvillea','camellia','mallow','mexican petunia','bromelia','blanket flower','trumpet creeper','blackberry lily']
@@ -37,7 +37,7 @@ names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet 
 
 # # Decide if cuda
 
-# In[ ]:
+# In[58]:
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,7 +47,7 @@ torch.backends.cudnn.benchmark = True
 
 # # Load dataset
 
-# In[ ]:
+# In[59]:
 
 
 trainingData = datasets.Flowers102(
@@ -55,15 +55,14 @@ trainingData = datasets.Flowers102(
     split = "train",
     download = True,
     transform = transforms.Compose([
-        transforms.RandomResizedCrop((256, 256),scale=(0.85,1.0),),
+        transforms.RandomResizedCrop((256, 256),scale=(0.9,1.0),),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(20), 
-        transforms.ColorJitter(contrast=0.1,brightness=0.1, saturation=0.1,hue=0.05),#becaise the dataset will evidently be sensitve to colour might want to avoid this one
+        transforms.ColorJitter(contrast=0.1,brightness=0.12, saturation=0.1,hue=0.05),#becaise the dataset will evidently be sensitve to colour might want to avoid this one
         transforms.RandomAffine(degrees=0,translate=(0.1,0.1),scale=(0.9,1.1),shear=0.1),
-        # transforms.GaussianBlur(kernel_size=(2,2),sigma=(0.1,0.8)),
         transforms.Resize((224,224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.432, 0.381, 0.296], [0.258,  0.209, 0.221] )
+        transforms.ToTensor().to(device),
+        transforms.Normalize([0.432, 0.381, 0.296], [0.258, 0.209, 0.221])
     ])
 )
 testData = datasets.Flowers102(
@@ -72,7 +71,7 @@ testData = datasets.Flowers102(
     download = True,
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.ToTensor(),
+        transforms.ToTensor().to(device),
         transforms.Normalize([0.432, 0.381, 0.296], [0.258,  0.209, 0.221] )
     ])
 )
@@ -82,13 +81,13 @@ valData = datasets.Flowers102(
     download = True,
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.ToTensor(),
+        transforms.ToTensor().to(device),
         transforms.Normalize([0.432, 0.381, 0.296], [0.258,  0.209, 0.221] )
     ])
 )
 
 
-# In[ ]:
+# In[60]:
 
 
 print(f'training data has: {len(trainingData)} images')
@@ -98,7 +97,7 @@ print(f'test data has: {len(testData)} images')
 
 # # Neural Network class
 
-# In[ ]:
+# In[61]:
 
 
 class NeuralNet(nn.Module):
@@ -140,16 +139,16 @@ class NeuralNet(nn.Module):
         
         self.classifier = nn.Sequential(
             #7
-            nn.Linear(4*4*512,4096), 
+            nn.Linear(512,2048), 
             nn.ReLU(inplace=True),
             nn.Dropout(0.5),
             #8
-            nn.Linear(4096,num_classes), 
+            nn.Linear(2048,num_classes), 
             # nn.Softmax(dim=1)
             nn.ReLU(inplace=True),
         )
         
-        self.avgpool = nn.AdaptiveAvgPool2d((4,4))#6.5
+        self.avgpool = nn.AdaptiveAvgPool2d((1,1))#6.5
         
     def forward(self, x):
         x=self.features(x)
@@ -161,13 +160,13 @@ class NeuralNet(nn.Module):
 
 # # Training loop
 
-# In[ ]:
+# In[62]:
 
 
 def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device):
-    cost = nn.CrossEntropyLoss(label_smoothing=0.2).to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.002)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=5, factor=0.4, mode='min')
+    cost = nn.CrossEntropyLoss(label_smoothing=0.1).to(device)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=8, factor=0.5, mode='min')
     
     best_val_acc = 0.0
     best_epoch = 0
@@ -243,7 +242,7 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
 
 # # Plot the avg loss against epochs
 
-# In[ ]:
+# In[63]:
 
 
 def plot_array(array,name):
@@ -254,7 +253,7 @@ def plot_array(array,name):
 
 # # Display the training, testing, validation accuracy
 
-# In[ ]:
+# In[64]:
 
 
 def evaluate(model, dataloader, device, cost):
@@ -279,7 +278,7 @@ def evaluate(model, dataloader, device, cost):
 
 # # evaluate on test, validation and training data
 
-# In[ ]:
+# In[65]:
 
 
 def all_eval(model, device, cost):
@@ -293,7 +292,7 @@ def all_eval(model, device, cost):
 
 # # Save model
 
-# In[ ]:
+# In[66]:
 
 
 def save(model, pathname):
@@ -303,7 +302,7 @@ def save(model, pathname):
 
 # # Load model
 
-# In[ ]:
+# In[67]:
 
 
 def load(model, pathname ,device):
@@ -314,7 +313,7 @@ def load(model, pathname ,device):
 
 # # Visualise samples
 
-# In[ ]:
+# In[68]:
 
 
 def visualize_samples(dataset, num_samples=5):
@@ -326,7 +325,7 @@ def visualize_samples(dataset, num_samples=5):
         image, label = dataset[sample_idx]
 
         # Denormalize the image
-        image = image * torch.tensor([0.258,  0.209, 0.221]).view(3, 1, 1) + torch.tensor([0.432, 0.381, 0.296]).view(3, 1, 1) #[0.258,  0.209, 0.221]
+        image = image * torch.tensor([0.258, 0.209, 0.221]).view(3, 1, 1) + torch.tensor([0.432, 0.381, 0.296]).view(3, 1, 1) #[0.258,  0.209, 0.221]
         #[0.432, 0.381, 0.296]
         # Plot the image
         axes[i].imshow(image.permute(1, 2, 0))
@@ -336,7 +335,7 @@ def visualize_samples(dataset, num_samples=5):
     plt.show()
 
 # Visualize samples from the test dataset, something for sanity really
-visualize_samples(testData)
+# visualize_samples(testData)
 
 
 # # main loop
@@ -345,10 +344,10 @@ visualize_samples(testData)
 
 
 if __name__ == '__main__':
-    BATCH_SIZE = 8
+    BATCH_SIZE = 10
     NUM_CLASSES = 102
-    LEARNING_RATE = 0.00015#0.0002
-    NUM_EPOCHS = 200
+    LEARNING_RATE = 0.0002
+    NUM_EPOCHS = 400
     
     train_dataloader = DataLoader(trainingData, batch_size=BATCH_SIZE, shuffle=True, num_workers=6, prefetch_factor=4,persistent_workers=True)
     test_dataloader = DataLoader(testData, batch_size=BATCH_SIZE, shuffle=False, num_workers=6, prefetch_factor=4,persistent_workers=True)
@@ -361,6 +360,12 @@ if __name__ == '__main__':
     plot_array(training_epoch_losses,'training epoch losses')
     plot_array(val_acc_per,'validation accuracy per epoch')
     plot_array(tra_acc_per,'training accuracy per epoch')
+
+
+# In[ ]:
+
+
+model_graph = draw_graph()
 
 
 # # runs a command that converts this notebook to a py script
