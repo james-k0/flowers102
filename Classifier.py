@@ -3,7 +3,7 @@
 
 # # Lets import some things
 
-# In[ ]:
+# In[1]:
 
 
 import numpy as np
@@ -23,7 +23,7 @@ import torchviz
 
 # # I found a text file with the classnames
 
-# In[ ]:
+# In[2]:
 
 
 names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet pea','english marigold','tiger lily','moon orchid','bird of paradise','monkshood','globe thistle','snapdragon',"colt's foot",'king protea','spear thistle','yellow iris','globe-flower','purple coneflower','peruvian lily','balloon flower','giant white arum lily','fire lily','pincushion flower','fritillary','red ginger','grape hyacinth','corn poppy','prince of wales feathers','stemless gentian','artichoke','sweet william','carnation','garden phlox','love in the mist','mexican aster','alpine sea holly','ruby-lipped cattleya','cape flower','great masterwort','siam tulip','lenten rose','barbeton daisy','daffodil','sword lily','poinsettia','bolero deep blue','wallflower','marigold','buttercup','oxeye daisy','common dandelion','petunia','wild pansy','primula','sunflower','pelargonium','bishop of llandaff','gaura','geranium','orange dahlia','pink-yellow dahlia?','cautleya spicata','japanese anemone','black-eyed susan','silverbush','californian poppy','osteospermum','spring crocus','bearded iris','windflower','tree poppy','gazania','azalea','water lily','rose','thorn apple','morning glory','passion flower','lotus','toad lily','anthurium','frangipani','clematis','hibiscus','columbine','desert-rose','tree mallow','magnolia','cyclamen ','watercress','canna lily','hippeastrum ','bee balm','ball moss','foxglove','bougainvillea','camellia','mallow','mexican petunia','bromelia','blanket flower','trumpet creeper','blackberry lily']
@@ -31,7 +31,7 @@ names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet 
 
 # # Decide if cuda
 
-# In[ ]:
+# In[3]:
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -41,7 +41,7 @@ torch.backends.cudnn.benchmark = True
 
 # # Load dataset
 
-# In[ ]:
+# In[4]:
 
 
 trainingData = datasets.Flowers102(
@@ -81,7 +81,7 @@ valData = datasets.Flowers102(
 )
 
 
-# In[ ]:
+# In[5]:
 
 
 print(f'training data has: {len(trainingData)} images')
@@ -91,7 +91,7 @@ print(f'test data has: {len(testData)} images')
 
 # # Neural Network class
 
-# In[ ]:
+# In[6]:
 
 
 class NeuralNet(nn.Module):
@@ -128,7 +128,6 @@ class NeuralNet(nn.Module):
             nn.BatchNorm2d(512),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2,2),
-            # nn.Dropout(0.2)
         )
         
         self.classifier = nn.Sequential(
@@ -150,7 +149,7 @@ class NeuralNet(nn.Module):
 
 # # Training loop
 
-# In[ ]:
+# In[7]:
 
 
 def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device):
@@ -216,12 +215,12 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
             best_epoch = epoch
             save(model, "best_model_checkpoint")
         
-        if quit_early_counter >= 5: #quit early if needed
-            print('Validation accuracy hasnt improved over the last 5 epochs. Stopping training.')
+        if quit_early_counter >= 10: #quit early if needed
+            print('Validation accuracy hasnt improved over the last 10 epochs. Stopping training.')
             break
-        if tra_acc == 100:
-            print('Model converged to 100% accuracy on training data. Stopping training.')
-            break
+        # if tra_acc == 100:
+        #     print('Model converged to 100% accuracy on training data. Stopping training.')
+        #     break
     
     #training is now over
     print(f'Best validation accuracy: {best_val_acc:.3f}% at epoch {best_epoch+1}')
@@ -235,7 +234,7 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
 
 # # Function to plot some list
 
-# In[ ]:
+# In[8]:
 
 
 def plot_array(array,name):
@@ -246,16 +245,16 @@ def plot_array(array,name):
 
 # # Evaluate the model for some dataloader against some cost function
 
-# In[ ]:
+# In[9]:
 
 
 def evaluate(model, dataloader, device, cost):
-    model.eval()
+    model.eval() # set model ot evalutation mode
     correct = 0
     total =0
     total_loss =0.0
-    with torch.no_grad():
-        for images, labels in dataloader:
+    with torch.no_grad(): #so that it doesnt calculate gradients 
+        for images, labels in dataloader: #gather images and labels for a batch
             images = images.to(device)
             labels = labels.to(device)
             outputs = model(images)
@@ -271,7 +270,7 @@ def evaluate(model, dataloader, device, cost):
 
 # # evaluate on test, validation and training data
 
-# In[ ]:
+# In[10]:
 
 
 def all_eval(model, device, cost):
@@ -285,7 +284,7 @@ def all_eval(model, device, cost):
 
 # # Save model
 
-# In[ ]:
+# In[11]:
 
 
 def save(model, pathname):
@@ -295,7 +294,7 @@ def save(model, pathname):
 
 # # Load model
 
-# In[ ]:
+# In[12]:
 
 
 def load(model, pathname ,device):
@@ -306,7 +305,7 @@ def load(model, pathname ,device):
 
 # # Visualise samples
 
-# In[ ]:
+# In[13]:
 
 
 def visualize_samples(dataset, num_samples=5):
@@ -323,7 +322,7 @@ def visualize_samples(dataset, num_samples=5):
         axes[i].axis('off')
 
     plt.show()
-# visualize_samples(testData)
+visualize_samples(testData)
 
 
 # # main loop
@@ -335,7 +334,7 @@ if __name__ == '__main__':
     BATCH_SIZE = 16
     NUM_CLASSES = 102
     LEARNING_RATE = 0.0015
-    NUM_EPOCHS = 200
+    NUM_EPOCHS = 300
     
     train_dataloader = DataLoader(trainingData, batch_size=BATCH_SIZE, shuffle=True, num_workers=6, prefetch_factor=4,persistent_workers=True)
     test_dataloader = DataLoader(testData, batch_size=BATCH_SIZE, shuffle=False, num_workers=6, prefetch_factor=4,persistent_workers=True)
@@ -394,7 +393,7 @@ plot_pred(model, test_dataloader, names, device)
 
 # # runs a command that converts this notebook to a py script
 
-# In[1]:
+# In[ ]:
 
 
 def convert():
@@ -405,4 +404,10 @@ def convert():
 
 
 convert()
+
+
+# In[ ]:
+
+
+
 
