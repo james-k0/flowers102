@@ -1,9 +1,7 @@
 # flowers102
  
-all code should be functional from the classifer.ipynb file
-not including the dataset in the repo for obvious reasons
+all code should be functional from the classifer.ipynb file, equally for the .py file.
+I have chosen not to include the dataset as part of the repository for obvious reasons.
+You could always generate the .py script from the ipynb file if necessary for any reason.
 
-values for dataloaders etc are chosen based on how easily it would run on a
-GTX 2060 gpu. The training time will increase massively on the occasion that
-you load more data than you have dedicated gpu VRAM as the preloaded pin 
-memory from ram has to be sent to the gpu first
+see requirements.txt
