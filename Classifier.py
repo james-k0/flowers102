@@ -3,7 +3,7 @@
 
 # # Lets import some things
 
-# In[1]:
+# In[ ]:
 
 
 import numpy as np
@@ -23,7 +23,7 @@ import torchviz
 
 # # I found a text file with the classnames
 
-# In[2]:
+# In[ ]:
 
 
 names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet pea','english marigold','tiger lily','moon orchid','bird of paradise','monkshood','globe thistle','snapdragon',"colt's foot",'king protea','spear thistle','yellow iris','globe-flower','purple coneflower','peruvian lily','balloon flower','giant white arum lily','fire lily','pincushion flower','fritillary','red ginger','grape hyacinth','corn poppy','prince of wales feathers','stemless gentian','artichoke','sweet william','carnation','garden phlox','love in the mist','mexican aster','alpine sea holly','ruby-lipped cattleya','cape flower','great masterwort','siam tulip','lenten rose','barbeton daisy','daffodil','sword lily','poinsettia','bolero deep blue','wallflower','marigold','buttercup','oxeye daisy','common dandelion','petunia','wild pansy','primula','sunflower','pelargonium','bishop of llandaff','gaura','geranium','orange dahlia','pink-yellow dahlia?','cautleya spicata','japanese anemone','black-eyed susan','silverbush','californian poppy','osteospermum','spring crocus','bearded iris','windflower','tree poppy','gazania','azalea','water lily','rose','thorn apple','morning glory','passion flower','lotus','toad lily','anthurium','frangipani','clematis','hibiscus','columbine','desert-rose','tree mallow','magnolia','cyclamen ','watercress','canna lily','hippeastrum ','bee balm','ball moss','foxglove','bougainvillea','camellia','mallow','mexican petunia','bromelia','blanket flower','trumpet creeper','blackberry lily']
@@ -31,7 +31,7 @@ names = [ 'pink primrose','hard-leaved pocket orchid','canterbury bells','sweet 
 
 # # Decide if cuda
 
-# In[3]:
+# In[ ]:
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -41,7 +41,7 @@ torch.backends.cudnn.benchmark = True
 
 # # Load dataset
 
-# In[4]:
+# In[ ]:
 
 
 trainingData = datasets.Flowers102(
@@ -81,7 +81,7 @@ valData = datasets.Flowers102(
 )
 
 
-# In[5]:
+# In[ ]:
 
 
 print(f'training data has: {len(trainingData)} images')
@@ -91,7 +91,7 @@ print(f'test data has: {len(testData)} images')
 
 # # Neural Network class
 
-# In[6]:
+# In[ ]:
 
 
 class NeuralNet(nn.Module):
@@ -149,7 +149,7 @@ class NeuralNet(nn.Module):
 
 # # Training loop
 
-# In[7]:
+# In[ ]:
 
 
 def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device):
@@ -215,12 +215,9 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
             best_epoch = epoch
             save(model, "best_model_checkpoint")
         
-        if quit_early_counter >= 10: #quit early if needed
-            print('Validation accuracy hasnt improved over the last 10 epochs. Stopping training.')
+        if quit_early_counter >= 7: #quit early if needed
+            print('Validation accuracy hasnt improved over the last 7 epochs. Stopping training.')
             break
-        # if tra_acc == 100:
-        #     print('Model converged to 100% accuracy on training data. Stopping training.')
-        #     break
     
     #training is now over
     print(f'Best validation accuracy: {best_val_acc:.3f}% at epoch {best_epoch+1}')
@@ -234,7 +231,7 @@ def train(model, train_dataloader, val_dataloader, num_epochs, learning_rate, de
 
 # # Function to plot some list
 
-# In[8]:
+# In[ ]:
 
 
 def plot_array(array,name):
@@ -245,7 +242,7 @@ def plot_array(array,name):
 
 # # Evaluate the model for some dataloader against some cost function
 
-# In[9]:
+# In[ ]:
 
 
 def evaluate(model, dataloader, device, cost):
@@ -270,7 +267,7 @@ def evaluate(model, dataloader, device, cost):
 
 # # evaluate on test, validation and training data
 
-# In[10]:
+# In[ ]:
 
 
 def all_eval(model, device, cost):
@@ -284,7 +281,7 @@ def all_eval(model, device, cost):
 
 # # Save model
 
-# In[11]:
+# In[ ]:
 
 
 def save(model, pathname):
@@ -294,7 +291,7 @@ def save(model, pathname):
 
 # # Load model
 
-# In[12]:
+# In[ ]:
 
 
 def load(model, pathname ,device):
@@ -305,7 +302,7 @@ def load(model, pathname ,device):
 
 # # Visualise samples
 
-# In[13]:
+# In[ ]:
 
 
 def visualize_samples(dataset, num_samples=5):
@@ -357,7 +354,7 @@ if __name__ == '__main__':
 def plot_pred(model, dataloader, names, device):
     model.eval() 
     
-    img_total = len(dataloader.dataset)
+    img_total = len(dataloader.dataset) #so that it iterates over whole thing not one batch
     
     data_iter = iter(dataloader)
     images, labels = next(data_iter)
@@ -369,7 +366,7 @@ def plot_pred(model, dataloader, names, device):
     with torch.no_grad():
         outputs = model(image)
         probs = torch.nn.functional.softmax(outputs, dim=1)
-        top5_probs, top5_index = torch.topk(probs, 5)
+        top5_probs, top5_index = torch.topk(probs, 5) #obtain the top 5 predictions
     
     top5_probs = top5_probs[0].cpu().numpy()
     top5_index = top5_index[0].cpu().numpy()
