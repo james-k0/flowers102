@@ -1,0 +1,3 @@
+venv: the following packages are prerequisite 
+for running the code; numpy, torch, matplotlib, jupyter, seaborn, torchvision, 
+for training wtih gpu it would be advised to download: nvidia-cudnn-cu11.
