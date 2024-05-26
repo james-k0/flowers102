@@ -1,3 +1,9 @@
 venv: the following packages are prerequisite 
 for running the code; numpy, torch, matplotlib, jupyter, seaborn, torchvision, 
 for training wtih gpu it would be advised to download: nvidia-cudnn-cu11.
+
+you are required enough storage space for the data to download ~675MB
+
+if you would like to load a model for example '65' please refer to the main loop and uncomment the line 'loadandeval()'
+if you would like the train the model please refer to the main loop and uncomment the line 'trainandplot()'
+

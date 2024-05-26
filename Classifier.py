@@ -16,9 +16,7 @@ import torchvision
 from torchvision import datasets
 import torchvision.transforms.v2 as transforms
 import time
-from torchsummary import summary
-import scipy.io
-import torchviz
+from torch.utils.tensorboard import SummaryWriter
 
 
 # # I found a text file with the classnames
@@ -99,32 +97,32 @@ class NeuralNet(nn.Module):
         super(NeuralNet, self).__init__()
         self.features = nn.Sequential(
             #1
-            nn.Conv2d(3, 64, kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(3, 64, kernel_size=3,padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2,2),
             #2
-            nn.Conv2d(64,128,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(64,128,kernel_size=3,padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2,stride=2),
             #3
-            nn.Conv2d(128,256,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(128,256,kernel_size=3,padding=1),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2,stride=2),
             #4
-            nn.Conv2d(256,512,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(256,512,kernel_size=3,padding=1),
             nn.BatchNorm2d(512),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2,2),
             #5
-            nn.Conv2d(512,512,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(512,512,kernel_size=3,padding=1),
             nn.BatchNorm2d(512),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2,stride=2),
             #6
-            nn.Conv2d(512,512,kernel_size=3,padding=1,bias=False),
+            nn.Conv2d(512,512,kernel_size=3,padding=1),
             nn.BatchNorm2d(512),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2,2),
@@ -328,22 +326,31 @@ visualize_samples(testData)
 
 
 if __name__ == '__main__':
+    #define hyper parameters
     BATCH_SIZE = 16
     NUM_CLASSES = 102
     LEARNING_RATE = 0.0015
     NUM_EPOCHS = 300
-    
+    #define dataloaders
     train_dataloader = DataLoader(trainingData, batch_size=BATCH_SIZE, shuffle=True, num_workers=6, prefetch_factor=4,persistent_workers=True)
     test_dataloader = DataLoader(testData, batch_size=BATCH_SIZE, shuffle=False, num_workers=6, prefetch_factor=4,persistent_workers=True)
     val_dataloader = DataLoader(valData, batch_size=BATCH_SIZE, shuffle=False, num_workers=6,prefetch_factor=4,persistent_workers=True)
-    
+    # define model on cuda device
     model = NeuralNet(num_classes=NUM_CLASSES).to(device)
- 
-    training_epoch_losses, val_acc_per, tra_acc_per = train(model=model,train_dataloader=train_dataloader, val_dataloader=val_dataloader, num_epochs=NUM_EPOCHS, learning_rate=LEARNING_RATE, device=device)
-
-    plot_array(training_epoch_losses,'training epoch losses')
-    plot_array(val_acc_per,'validation accuracy per epoch')
-    plot_array(tra_acc_per,'training accuracy per epoch')
+    
+    def trainandplot():
+        #train the model
+        training_epoch_losses, val_acc_per, tra_acc_per = train(model=model,train_dataloader=train_dataloader, val_dataloader=val_dataloader, num_epochs=NUM_EPOCHS, learning_rate=LEARNING_RATE, device=device)
+        #plot the data returned by the training loop
+        plot_array(training_epoch_losses,'training epoch losses')
+        plot_array(val_acc_per,'validation accuracy per epoch')
+        plot_array(tra_acc_per,'training accuracy per epoch')
+    # trainandplot()
+    
+    def loadandeval():
+        load(model=model, pathname='65', device=device)
+        all_eval(model=model, device=device, cost=nn.CrossEntropyLoss())
+    # loadandeval()
 
 
 # # Plot predicted top k for a random flower
@@ -373,7 +380,7 @@ def plot_pred(model, dataloader, names, device):
     
     fig, ax = plt.subplots()
     image_display = image.cpu().squeeze().permute(1, 2, 0) 
-    image_display = image_display * torch.tensor([0.258, 0.209, 0.221]).view(1, 1, 3) + torch.tensor([0.432, 0.381, 0.296]).view(1, 1, 3)
+    image_display = image_display * torch.tensor([0.258, 0.209, 0.221]).view(3, 1, 1) + torch.tensor([0.432, 0.381, 0.296]).view(3, 1, 1)
     image_display = image_display.numpy()
     ax.imshow(image_display)
     ax.set_title(f'{names[label]}')
@@ -385,12 +392,12 @@ def plot_pred(model, dataloader, names, device):
     ax.set_xlabel('Probability')
     plt.show()
 
-plot_pred(model, test_dataloader, names, device)
+# plot_pred(model, test_dataloader, names, device)
 
 
 # # runs a command that converts this notebook to a py script
 
-# In[ ]:
+# In[21]:
 
 
 def convert():
@@ -400,11 +407,5 @@ def convert():
 # In[ ]:
 
 
-#convert()
-
-
-# In[ ]:
-
-
-
+convert()
 
