@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
+from IPython import get_ipython
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torchvision
@@ -407,5 +408,5 @@ def convert():
 # In[ ]:
 
 
-convert()
+#convert()
 
